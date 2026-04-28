@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Roleta FINDES IEL</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,600;0,700;0,900;1,700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: linear-gradient(160deg, #080f25 0%, #0d1a3a 60%, #080f25 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      font-family: 'Poppins', sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* ── Logo topo ── */
+    .logo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 28px;
+      line-height: 1;
+    }
+    .logo-findes {
+      font-size: clamp(0.85rem, 2vw, 1.15rem);
+      font-weight: 700;
+      font-style: italic;
+      color: #4EC9C0;
+      letter-spacing: 5px;
+    }
+    .logo-iel {
+      font-size: clamp(2.2rem, 5.5vw, 3.8rem);
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 10px;
+    }
+    .logo-sub {
+      font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+      font-weight: 600;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 7px;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* ── Wheel wrapper ── */
+    .wheel-wrapper {
+      position: relative;
+      width: min(88vw, 500px);
+      height: min(88vw, 500px);
+      margin-bottom: 28px;
+    }
+
+    /* Seta apontando para baixo (indicador) */
+    .pointer {
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0; height: 0;
+      border-left: 15px solid transparent;
+      border-right: 15px solid transparent;
+      border-top: 34px solid #ffffff;
+      filter: drop-shadow(0 4px 10px rgba(78,201,192,0.9));
+      z-index: 10;
+    }
+
+    canvas#wheel {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 5px rgba(255,255,255,0.12),
+        0 0 70px rgba(44,197,184,0.25),
+        0 28px 90px rgba(0,0,0,0.75);
+    }
+
+    /* ── Overlay de resultado ── */
+    .result-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(8, 4, 28, 0.78);
+      backdrop-filter: blur(7px);
+      -webkit-backdrop-filter: blur(7px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+    .result-overlay.show {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .result-card {
+      background: linear-gradient(145deg, #1e0f50, #0d2a6e);
+      border: 2px solid rgba(255, 255, 255, 0.14);
+      border-radius: 28px;
+      padding: 48px 64px;
+      text-align: center;
+      max-width: 440px;
+      width: 90vw;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+      transform: scale(0.82);
+      transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .result-overlay.show .result-card { transform: scale(1); }
+
+    .result-emoji {
+      font-size: 68px;
+      display: block;
+      margin-bottom: 14px;
+      line-height: 1;
+    }
+    .result-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 4px;
+      color: rgba(255, 255, 255, 0.45);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .result-title {
+      font-size: clamp(2rem, 6vw, 2.6rem);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 8px;
+    }
+    .result-sub {
+      font-size: 1rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 36px;
+    }
+    .btn-fechar {
+      padding: 15px 44px;
+      border: none;
+      border-radius: 100px;
+      background: linear-gradient(135deg, #2DC5B8, #1B3D8E);
+      color: #fff;
+      font-family: 'Poppins', sans-serif;
+      font-size: 1rem;
+      font-weight: 900;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: filter 0.15s ease, transform 0.15s ease;
+      box-shadow: 0 6px 24px rgba(45, 197, 184, 0.35);
+    }
+    .btn-fechar:hover  { filter: brightness(1.15); transform: translateY(-2px); }
+    .btn-fechar:active { transform: translateY(0); }
+
+    /* ── Botões ── */
+    .controls { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; }
+
+    .btn {
+      padding: 17px 54px;
+      font-family: 'Poppins', sans-serif;
+      font-size: clamp(1rem, 2.6vw, 1.3rem);
+      font-weight: 900;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: transform 0.14s ease, box-shadow 0.14s ease, opacity 0.2s;
+    }
+    .btn:disabled { opacity: 0.28; cursor: default; }
+
+    #btnGirar {
+      background: linear-gradient(135deg, #00e676, #1de9b6);
+      color: #003322;
+      box-shadow: 0 6px 26px rgba(0, 230, 118, 0.4);
+    }
+    #btnGirar:not(:disabled):hover  { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(0,230,118,0.65); }
+    #btnGirar:not(:disabled):active { transform: translateY(0); }
+
+    #btnParar {
+      background: linear-gradient(135deg, #ff1744, #ff6d00);
+      color: #fff;
+      box-shadow: 0 6px 26px rgba(255, 23, 68, 0.4);
+    }
+    #btnParar:not(:disabled):hover  { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(255,23,68,0.65); }
+    #btnParar:not(:disabled):active { transform: translateY(0); }
+  </style>
+</head>
+<body>
+
+  <div class="logo">
+    <span class="logo-finds">FINDES</span>
+    <span class="logo-iel">IEL</span>
+    <span class="logo-sub">Roleta de Estágios</span>
+  </div>
+
+  <div class="wheel-wrapper">
+    <div class="pointer"></div>
+    <canvas id="wheel"></canvas>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="btnGirar">GIRAR</button>
+    <button class="btn" id="btnParar" disabled>PARAR</button>
+  </div>
+
+  <!-- Modal de resultado -->
+  <div class="result-overlay" id="resultOverlay">
+    <div class="result-card">
+      <span class="result-emoji" id="resEmoji">🎁</span>
+      <div class="result-label">Resultado</div>
+      <div class="result-title" id="resTitle">Ganhou!</div>
+      <div class="result-sub"   id="resSub"></div>
+      <button class="btn-fechar" id="btnFechar">Jogar Novamente</button>
+    </div>
+  </div>
+
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Segmentos — ordem horária a partir das 12h
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const SEGMENTS = [
+  { title: "Tente outra vez",  sub: "Boa sorte na próxima!", icon: "retry", emoji: "🔄", color: "#2DC5B8" },
+  { title: "Ganhou!",          sub: "Brinde IEL",            icon: "gift",  emoji: "🎁", color: "#1B3D8E" },
+  { title: "Ganhou!",          sub: "Condição especial IEL", icon: null,    emoji: "⭐", color: "#8B50BE" },
+  { title: "Ganhou!",          sub: "Brinde IEL",            icon: "gift",  emoji: "🎁", color: "#4EC9C0" },
+  { title: "Tente outra vez",  sub: "Boa sorte na próxima!", icon: "retry", emoji: "🔄", color: "#4EC9C0" },
+  { title: "Ganhou!",          sub: "Condição especial IEL", icon: null,    emoji: "⭐", color: "#1B3D8E" },
+  { title: "Ganhou!",          sub: "Brinde IEL",            icon: "gift",  emoji: "🎁", color: "#8B50BE" },
+  { title: "Ganhou!",          sub: "Condição especial IEL", icon: null,    emoji: "⭐", color: "#2DC5B8" },
+];
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Canvas
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const canvas = document.getElementById("wheel");
+const ctx    = canvas.getContext("2d");
+const DPR    = Math.min(window.devicePixelRatio || 1, 2);
+const SIZE   = 500;
+canvas.width  = SIZE * DPR;
+canvas.height = SIZE * DPR;
+ctx.scale(DPR, DPR);
+
+const CX = SIZE / 2, CY = SIZE / 2;
+const R  = SIZE / 2 - 3;
+const N  = SEGMENTS.length;
+const SA = (2 * Math.PI) / N; // ângulo por fatia
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Física
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const MAX_VEL = 0.012;    // rad/ms  (≈ 1.9 rot/s)
+const ACCEL   = 0.000008; // rad/ms² (≈ 1.5s para atingir velocidade máxima)
+
+let rotation = 0, velocity = 0;
+let phase = "idle"; // idle | spinning | stopping | done
+let prevTs = null, rafId = null;
+
+let stopPending = false, winnerTarget = -1;
+let stopStart = 0, stopDelta = 0, stopDuration = 0, stopT0 = 0;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Ícones desenhados via canvas paths
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Seta circular (↻) — cx,cy são relativos ao sistema de coordenadas atual
+function drawRetryIcon(cx, cy, sz) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(255,255,255,0.88)";
+  ctx.lineWidth = Math.max(2, sz * 0.11);
+  ctx.lineCap = "round";
+
+  const r = sz * 0.46;
+  // Arco de ~300°
+  ctx.beginPath();
+  ctx.arc(0, 0, r, -Math.PI * 0.3, Math.PI * 1.2);
+  ctx.stroke();
+
+  // Seta no fim do arco (ângulo 1.2π)
+  const ea = Math.PI * 1.2;
+  const ex = Math.cos(ea) * r, ey = Math.sin(ea) * r;
+  const al = sz * 0.28;
+  const t1 = ea + Math.PI / 2 - 0.55, t2 = ea + Math.PI / 2 + 0.55;
+  ctx.beginPath();
+  ctx.moveTo(ex + Math.cos(t1) * al, ey + Math.sin(t1) * al);
+  ctx.lineTo(ex, ey);
+  ctx.lineTo(ex + Math.cos(t2) * al, ey + Math.sin(t2) * al);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// Caixa de presente — cx,cy são relativos ao sistema de coordenadas atual
+function drawGiftIcon(cx, cy, sz) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(255,255,255,0.88)";
+  ctx.lineWidth = Math.max(1.5, sz * 0.08);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  const w = sz * 0.65, bodyH = sz * 0.44, lidH = sz * 0.22;
+  const bx = -w / 2;
+  // Centraliza verticalmente: topo da tampa = -(lidH+bodyH)/2
+  const by = (lidH - bodyH) / 2; // topo do corpo
+
+  // Corpo
+  ctx.strokeRect(bx, by, w, bodyH);
+  // Tampa
+  ctx.strokeRect(bx - sz * 0.04, by - lidH, w + sz * 0.08, lidH);
+  // Fita vertical
+  ctx.beginPath();
+  ctx.moveTo(0, by - lidH);
+  ctx.lineTo(0, by + bodyH);
+  ctx.stroke();
+  // Fita horizontal (junção tampa-corpo)
+  ctx.beginPath();
+  ctx.moveTo(bx - sz * 0.04, by);
+  ctx.lineTo(bx + w + sz * 0.04, by);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Renderização
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function draw(highlight = -1) {
+  ctx.clearRect(0, 0, SIZE, SIZE);
+
+  for (let i = 0; i < N; i++) {
+    const seg = SEGMENTS[i];
+    const a0  = rotation - Math.PI / 2 + i * SA;
+    const a1  = a0 + SA;
+    const mid = a0 + SA / 2;
+
+    // ── Fatia ──
+    ctx.beginPath();
+    ctx.moveTo(CX, CY);
+    ctx.arc(CX, CY, R, a0, a1);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+
+    // Destaque do vencedor
+    if (i === highlight) {
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = "#fff";
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Divisória branca
+    ctx.strokeStyle = "rgba(255,255,255,0.38)";
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // ── Texto e ícone no espaço do segmento ──
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.rotate(mid);
+
+    const textX = R - 22;
+    ctx.textAlign   = "right";
+    ctx.fillStyle   = "#fff";
+    ctx.shadowColor = "rgba(0,0,0,0.45)";
+    ctx.shadowBlur  = 3;
+
+    if (seg.title === "Tente outra vez") {
+      ctx.font = "bold 18px 'Poppins', sans-serif";
+      ctx.fillText("Tente",    textX, -10);
+      ctx.fillText("outra vez", textX,  10);
+    } else {
+      ctx.font = "bold 20px 'Poppins', sans-serif";
+      ctx.fillText(seg.title, textX, -6);
+      if (seg.sub) {
+        ctx.font = "12px 'Poppins', sans-serif";
+        ctx.fillText(seg.sub, textX, 12);
+      }
+    }
+
+    // Ícone posicionado a ~52% do raio (entre centro e texto)
+    if (seg.icon) {
+      const iconX = R * 0.51;
+      if (seg.icon === "retry") drawRetryIcon(iconX, 0, 30);
+      if (seg.icon === "gift")  drawGiftIcon(iconX, 0, 30);
+    }
+
+    ctx.restore();
+  }
+
+  // ── Borda branca externa ──
+  ctx.beginPath();
+  ctx.arc(CX, CY, R, 0, 2 * Math.PI);
+  ctx.strokeStyle = "rgba(255,255,255,0.2)";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // ── Hub central (roxo com logo FINDES IEL) ──
+  const hubR = 60;
+  const grad = ctx.createRadialGradient(CX, CY, 0, CX, CY, hubR);
+  grad.addColorStop(0,   "#8660D0");
+  grad.addColorStop(0.5, "#5C35A0");
+  grad.addColorStop(1,   "#3A1E78");
+  ctx.beginPath();
+  ctx.arc(CX, CY, hubR, 0, 2 * Math.PI);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  // Anel branco fino
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  // Texto "FINDES"
+  ctx.fillStyle    = "#fff";
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowBlur   = 0;
+  ctx.font = "italic bold 13px 'Poppins', sans-serif";
+  ctx.fillText("FINDES", CX, CY - 13);
+
+  // Texto "IEL"
+  ctx.font = "bold 28px 'Poppins', sans-serif";
+  ctx.fillText("IEL", CX, CY + 14);
+
+  ctx.textBaseline = "alphabetic";
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Utilitários de ângulo
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// Retorna o índice do segmento que está sob a seta (topo)
+function topSegment(rot) {
+  const norm = ((-rot % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  return Math.floor(norm / SA) % N;
+}
+
+// Calcula a rotação final exata para parar no centro do segmento idx
+function calcTargetRot(currRot, idx) {
+  const norm   = idx * SA + SA / 2;          // ângulo normalizado do centro do segmento
+  const modVal = 2 * Math.PI - norm;          // rotação mod 2π que satisfaz a condição
+  const extra  = (2 + Math.random() * 2) * 2 * Math.PI; // 2–4 voltas extras visíveis
+  const k      = Math.max(1, Math.ceil((currRot + extra - modVal) / (2 * Math.PI)));
+  return k * 2 * Math.PI + modVal;
+}
+
+// Ease-out cúbica: arranca na mesma velocidade da fase girando, para suavemente
+function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  Loop de animação
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function loop(ts) {
+  const dt = prevTs === null ? 16 : Math.min(ts - prevTs, 50);
+  prevTs = ts;
+
+  // Ativa a parada no primeiro frame após o clique em PARAR
+  if (stopPending) {
+    stopPending   = false;
+    const target  = calcTargetRot(rotation, winnerTarget);
+    stopStart     = rotation;
+    stopDelta     = target - rotation;
+    // Duração calculada para que a velocidade inicial da ease-out bata com MAX_VEL
+    // (velocidade inicial de ease-out cúbica = 3 × delta / duration)
+    stopDuration  = 3 * stopDelta / MAX_VEL;
+    stopT0        = ts;
+    phase         = "stopping";
+  }
+
+  if (phase === "spinning") {
+    velocity  = Math.min(velocity + ACCEL * dt, MAX_VEL);
+    rotation += velocity * dt;
+    draw();
+
+  } else if (phase === "stopping") {
+    const p = Math.min((ts - stopT0) / stopDuration, 1);
+    rotation = stopStart + stopDelta * easeOut(p);
+
+    if (p >= 1) {
+      rotation = stopStart + stopDelta;
+      phase    = "done";
+      const w  = topSegment(rotation);
+      draw(w);
+      onDone(w);
+      return; // encerra o loop
+    }
+    draw();
+  }
+
+  rafId = requestAnimationFrame(loop);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+//  UI
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const btnGirar = document.getElementById("btnGirar");
+const btnParar = document.getElementById("btnParar");
+const overlay  = document.getElementById("resultOverlay");
+
+function onDone(idx) {
+  const seg = SEGMENTS[idx];
+  document.getElementById("resEmoji").textContent = seg.emoji;
+  document.getElementById("resTitle").textContent = seg.title;
+  document.getElementById("resSub").textContent   = seg.sub || "";
+
+  setTimeout(() => overlay.classList.add("show"), 350);
+}
+
+document.getElementById("btnFechar").addEventListener("click", () => {
+  overlay.classList.remove("show");
+  btnGirar.disabled = false;
+  btnParar.disabled = true;
+});
+
+btnGirar.addEventListener("click", () => {
+  if (phase === "spinning" || phase === "stopping") return;
+
+  phase    = "spinning";
+  velocity = 0.001;
+  prevTs   = null;
+
+  btnGirar.disabled = true;
+  btnParar.disabled = false;
+
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
+});
+
+btnParar.addEventListener("click", () => {
+  if (phase !== "spinning") return;
+  btnParar.disabled = true;
+  winnerTarget = Math.floor(Math.random() * N); // sorteio aleatório aqui
+  stopPending  = true;
+});
+
+// Desenho inicial
+draw();
+</script>
+</body>
+</html>
