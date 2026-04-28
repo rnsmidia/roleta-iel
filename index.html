@@ -196,6 +196,38 @@
     }
     #btnParar:not(:disabled):hover  { transform: translateY(-4px); box-shadow: 0 14px 36px rgba(255,23,68,0.65); }
     #btnParar:not(:disabled):active { transform: translateY(0); }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px 14px;
+        overflow-y: auto; /* permite scroll de segurança em telas muito pequenas */
+      }
+
+      .logo { margin-bottom: 10px; }
+      .logo-sub { display: none; } /* remove subtítulo para liberar altura */
+
+      .wheel-wrapper {
+        width: min(86vw, 400px);
+        height: min(86vw, 400px);
+        margin-bottom: 14px;
+      }
+
+      /* Botões lado a lado sem quebrar linha */
+      .controls {
+        flex-wrap: nowrap;
+        gap: 10px;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .btn {
+        padding: 14px 0;
+        width: 46%;
+        font-size: 0.9rem;
+        letter-spacing: 2px;
+      }
+    }
   </style>
 </head>
 <body>
