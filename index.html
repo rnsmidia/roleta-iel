@@ -233,7 +233,7 @@
 <body>
 
   <div class="logo">
-    <span class="logo-finds">FINDES</span>
+    <span class="logo-findes">FINDES</span>
     <span class="logo-iel">IEL</span>
     <span class="logo-sub">Roleta de Estágios</span>
   </div>
@@ -252,7 +252,7 @@
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
       <span class="result-emoji" id="resEmoji">🎁</span>
-      <div class="result-label">Resultado</div>
+      <div class="result-label" id="resLabel">Resultado</div>
       <div class="result-title" id="resTitle">Ganhou!</div>
       <div class="result-sub"   id="resSub"></div>
       <button class="btn-fechar" id="btnFechar">Jogar Novamente</button>
@@ -263,15 +263,31 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  Segmentos — ordem horária a partir das 12h
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ─────────────────────────────────────────────────────────────────────
+//  PROBABILIDADE  (weight = chance REAL de cada fatia cair · soma = 1.0)
+// ─────────────────────────────────────────────────────────────────────
+//  VISUAL  : a roda mostra 50% "NÃO FOI DESSA VEZ" (5 de 10 fatias iguais).
+//  REAL    : o sorteio é PONDERADO p/ economizar brindes durante a feira →
+//              NÃO FOI DESSA VEZ = 70%   (5 fatias × 0.14)
+//              cada prêmio       =  6%   (5 prêmios × 0.06)  → prêmios = 30%
+//
+//  >>> PARA AJUSTAR DURANTE O EVENTO: mude os "weight" abaixo (mantenha soma 1).
+//      • Sobrando MUITO brinde no fim?  baixe o weight do NÃO (ex.: 0.10) e
+//        suba o dos prêmios (ex.: 0.10) → mais gente ganha.
+//      • Acabando rápido?  suba o weight do NÃO.
+// ─────────────────────────────────────────────────────────────────────
+const LOSE = { title:"Não foi dessa vez", sub:"Boa sorte na próxima!", emoji:"🍀", win:false, color:"#28324d", label:["NÃO FOI","DESSA VEZ"], weight:0.14 };
 const SEGMENTS = [
-  { title: "Tente outra vez",  sub: "Boa sorte na próxima!", icon: "retry", emoji: "🔄", color: "#2DC5B8" },
-  { title: "Ganhou!",          sub: "Brinde IEL",            icon: "gift",  emoji: "🎁", color: "#1B3D8E" },
-  { title: "Ganhou!",          sub: "Condição especial IEL", icon: null,    emoji: "⭐", color: "#8B50BE" },
-  { title: "Ganhou!",          sub: "Brinde IEL",            icon: "gift",  emoji: "🎁", color: "#4EC9C0" },
-  { title: "Tente outra vez",  sub: "Boa sorte na próxima!", icon: "retry", emoji: "🔄", color: "#4EC9C0" },
-  { title: "Ganhou!",          sub: "Condição especial IEL", icon: null,    emoji: "⭐", color: "#1B3D8E" },
-  { title: "Ganhou!",          sub: "Brinde IEL",            icon: "gift",  emoji: "🎁", color: "#8B50BE" },
-  { title: "Ganhou!",          sub: "Condição especial IEL", icon: null,    emoji: "⭐", color: "#2DC5B8" },
+  { ...LOSE },
+  { title:"Ganhou um Brinde!",  sub:"Brinde Findes IEL",       emoji:"🎁", win:true, color:"#1B3D8E", label:["GANHOU","BRINDE"],                weight:0.06 },
+  { ...LOSE },
+  { title:"Condição Especial",  sub:"Fórum IEL",               emoji:"⭐", win:true, color:"#8B50BE", label:["CONDIÇÃO","ESPECIAL","FÓRUM IEL"], weight:0.06 },
+  { ...LOSE },
+  { title:"Condição Especial",  sub:"Academia",                emoji:"⭐", win:true, color:"#2DC5B8", label:["CONDIÇÃO","ESPECIAL","ACADEMIA"],  weight:0.06 },
+  { ...LOSE },
+  { title:"Condição Especial",  sub:"Carreira",                emoji:"⭐", win:true, color:"#4EC9C0", label:["CONDIÇÃO","ESPECIAL","CARREIRA"],  weight:0.06 },
+  { ...LOSE },
+  { title:"Realidade Virtual!", sub:"Experiência VR Findes IEL", emoji:"🥽", win:true, color:"#5C6BC0", label:["GANHOU","REALIDADE","VIRTUAL"],  weight:0.06 },
 ];
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -403,35 +419,24 @@ function draw(highlight = -1) {
     ctx.lineWidth = 2.5;
     ctx.stroke();
 
-    // ── Texto e ícone no espaço do segmento ──
+    // ── Texto do segmento (multi-linha, centralizado na fatia) ──
     ctx.save();
     ctx.translate(CX, CY);
     ctx.rotate(mid);
 
-    const textX = R - 22;
+    const textX = R - 18;
     ctx.textAlign   = "right";
     ctx.fillStyle   = "#fff";
     ctx.shadowColor = "rgba(0,0,0,0.45)";
     ctx.shadowBlur  = 3;
 
-    if (seg.title === "Tente outra vez") {
-      ctx.font = "bold 18px 'Poppins', sans-serif";
-      ctx.fillText("Tente",    textX, -10);
-      ctx.fillText("outra vez", textX,  10);
-    } else {
-      ctx.font = "bold 20px 'Poppins', sans-serif";
-      ctx.fillText(seg.title, textX, -6);
-      if (seg.sub) {
-        ctx.font = "12px 'Poppins', sans-serif";
-        ctx.fillText(seg.sub, textX, 12);
-      }
-    }
-
-    // Ícone posicionado a ~52% do raio (entre centro e texto)
-    if (seg.icon) {
-      const iconX = R * 0.51;
-      if (seg.icon === "retry") drawRetryIcon(iconX, 0, 30);
-      if (seg.icon === "gift")  drawGiftIcon(iconX, 0, 30);
+    const lines = seg.label;
+    const fs = lines.length <= 2 ? 19 : 15;  // 2 linhas = fonte maior; 3 linhas = menor
+    const lh = lines.length <= 2 ? 21 : 17;
+    ctx.font = `bold ${fs}px 'Poppins', sans-serif`;
+    const startY = -((lines.length - 1) * lh) / 2;
+    for (let li = 0; li < lines.length; li++) {
+      ctx.fillText(lines[li], textX, startY + li * lh + fs * 0.34);
     }
 
     ctx.restore();
@@ -496,6 +501,18 @@ function calcTargetRot(currRot, idx) {
 // Ease-out cúbica: arranca na mesma velocidade da fase girando, para suavemente
 function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
+// Sorteio PONDERADO pelos "weight" de cada segmento (economia de brindes).
+// A roda continua proporcional visualmente; só a chance de parar em cada fatia muda.
+function weightedPick() {
+  const total = SEGMENTS.reduce((s, seg) => s + (seg.weight || 0), 0);
+  let r = Math.random() * total;
+  for (let i = 0; i < SEGMENTS.length; i++) {
+    r -= SEGMENTS[i].weight || 0;
+    if (r < 0) return i;
+  }
+  return SEGMENTS.length - 1;
+}
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 //  Loop de animação
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -549,6 +566,7 @@ const overlay  = document.getElementById("resultOverlay");
 function onDone(idx) {
   const seg = SEGMENTS[idx];
   document.getElementById("resEmoji").textContent = seg.emoji;
+  document.getElementById("resLabel").textContent = seg.win ? "Parabéns" : "Resultado";
   document.getElementById("resTitle").textContent = seg.title;
   document.getElementById("resSub").textContent   = seg.sub || "";
 
@@ -578,7 +596,7 @@ btnGirar.addEventListener("click", () => {
 btnParar.addEventListener("click", () => {
   if (phase !== "spinning") return;
   btnParar.disabled = true;
-  winnerTarget = Math.floor(Math.random() * N); // sorteio aleatório aqui
+  winnerTarget = weightedPick(); // sorteio PONDERADO (ver "weight" em SEGMENTS)
   stopPending  = true;
 });
 
